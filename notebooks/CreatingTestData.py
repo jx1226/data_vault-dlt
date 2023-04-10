@@ -10,42 +10,6 @@ from pyspark.sql.functions import col
 
 # COMMAND ----------
 
-#Customer Payload:- {cdc_metada(), before (CustomerID, FirstName, LastName, DOB, AddrLine1, AddrLine2, City, County, ZipCode, Country, Phone, Mobile, Email),after (CustomerID, FirstName, LastName, DOB, AddrLine1, AddrLine2, City, County, ZipCode, Country, Phone, Mobile, Email, Op_Type), Op_Type, Op_TimeStamp }
-
-data_rows = 500
-name_spec =   dg.DataGenerator(
-    spark,
-    name="name",
-    rows=data_rows,
-    partitions=1
-  ).withColumn("first_name", percentNulls=0.0, template=r'\\w \\w|\\w a. \\w').withColumn("last_name", percentNulls=0.0, template=r'\\w \\w|\\w a. \\w')
-  
-df_spec = (
-  dg.DataGenerator(
-    spark,
-    name="customer_data_set",
-    rows=data_rows,
-    partitions=1
-  )
-  .withIdOutput()
-  .withColumn("customer_id", IntegerType(), minValue=1, maxValue=500)
-  .withColumn("first_name", percentNulls=0.0, template=r'\\w \\w|\\w a. \\w')
-  .withColumn("last_name", percentNulls=0.0, template=r'\\w \\w|\\w a. \\w')
-  .withColumn("dob",LongType(), minValue=315613588, maxValue=631232788, random=True)
-  .withColumn("addr_ln1", percentNulls=0.0, template=r'\\w \\w|\\w a. \\w')
-  .withColumn("addr_ln2", percentNulls=0.0, template=r'\\w \\w|\\w a. \\w')
-  .withColumn("zipcode", StringType(), values=['101FFIC022','101FFIC024','101FFIC025','101FFIC026','101FFIC027','101FFIC028','101FFIC029','101FFIC030','101FFIC031','101FFIC032','101FFIC042','101FFIC044','101FFIC045','101FFIC046','101FFIC047','101FFIC048','101FFIC049','101FFIC050','101FFIC051','101FFIC052'], random=True)
-  .withColumn("city", StringType(), values=['london','newyork','paris','stockholm','Amsterdam','zurich','kiruna','Copenhagen','kalmar','uppsala','sanfransisco','washington dc','miami','hague','rome','mumbai','bangalore','delhi','chennai'], random=True)
-  .withColumn("country", StringType(), values=['England','USA','France','Sweden','Netherland','Swtizerland','Denmark','India'], random=True)
-  .withColumn("phone", IntegerType(), minValue=7156135, maxValue=8312327, random=True)
-  .withColumn("mobile", LongType(), minValue=3156135882, maxValue=6312327884, random=True)
-  .withColumn("email",template=r'\\w.\\w@\\w.com|\\w-\\w@\\w')
-)
-                            
-cust_df = df_spec.build()
-
-# COMMAND ----------
-
 display(cust_df.select("first_name"))
 
 # COMMAND ----------
@@ -112,11 +76,6 @@ order_df3.write.mode("append").parquet("/user/data-vault/retail/order")
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC select unix_timestamp();
-
-# COMMAND ----------
-
-# MAGIC %sql
 # MAGIC select current_timestamp();
 
 # COMMAND ----------
@@ -152,27 +111,3 @@ order_data = [('xyz1111',None,(12341642,123456,'2023-04-03 17:58:02','C',700.0,1
 order_schema = StructType([StructField('cdc_metada', StringType(), True), StructField('before', StructType([StructField('Order_Id',IntegerType(),False),StructField('Customer_ID',IntegerType(),False),StructField('Order_Date',StringType(),True),StructField('Order_Status',StringType(),True),StructField('Order_Gross_Amount',DoubleType(),True),StructField('Order_Discount_Amount',DoubleType(),True),StructField('Order_net_Amount',DoubleType(),True)]), True),StructField('after', StructType([StructField('Order_Id',IntegerType(),False),StructField('Customer_ID',IntegerType(),False),StructField('Order_Date',StringType(),True),StructField('Order_Status',StringType(),True),StructField('Order_Gross_Amount',DoubleType(),True),StructField('Order_Discount_Amount',DoubleType(),True),StructField('Order_net_Amount',DoubleType(),True)]), True),StructField('Op_Type',StringType(),True),StructField('Op_TimeStamp',LongType(),True)])
 
 order_df3 = spark.createDataFrame(order_data,order_schema)
-
-# COMMAND ----------
-
-order_df3.write.mode("append").parquet("/user/data-vault/retail/order")
-
-# COMMAND ----------
-
-dbutils.fs.mkdirs("/user/data-vault/retail/order")
-
-# COMMAND ----------
-
-display(spark.read.parquet("/user/data-vault/retail/order"))
-
-# COMMAND ----------
-
-display(spark.read.parquet("/user/data-vault/retail/customer"))
-
-# COMMAND ----------
-
-# MAGIC %sql
-
-# COMMAND ----------
-
-, sha1(concat(col(customers.customer_id).cast(StringType()),customers.cust_addr_load_timestamp,col(link.order_id).cast(StringType())))
