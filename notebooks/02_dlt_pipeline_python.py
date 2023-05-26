@@ -281,17 +281,25 @@ def dim_customer():
 )
 def fact_order():
 
-    customer_address = dlt.read("sat_customer_address").select("customer_id_hash_key",col("load_timestamp").alias("cust_addr_load_timestamp"),"__END_AT").na.fill(224969529600,["__END_AT"]).withColumn("customer_address_end_time",from_unixtime("__END_AT"))
-    customers = dlt.read("hub_customer").select("customer_id_hash_key","customer_id").join(customer_address,["customer_id_hash_key"],"inner").withColumn("customer_dim_key",sha1(concat("customer_id","cust_addr_load_timestamp")))
+    dlt.read("sat_customer_address").select("customer_id_hash_key",col("load_timestamp").alias("cust_addr_load_timestamp"),"__END_AT").na.fill(224969529600,["__END_AT"]).withColumn("customer_address_end_time",from_unixtime("__END_AT")).createOrReplaceTempView("customer_address")
+
+    dlt.read("hub_customer").select("customer_id_hash_key","customer_id").createOrReplaceTempView("h_customer")
+
+    customer_df = spark.sql("select hc.customer_id customer_id, hc.customer_id_hash_key customer_id_hash_key, ca.cust_addr_load_timestamp cust_addr_load_timestamp, ca.customer_address_end_time customer_address_end_time from h_customer hc JOIN customer_address ca on hc.customer_id_hash_key = ca.customer_id_hash_key")
+
+    customer_df.createOrReplaceTempView("customers")
 
     hub_order = dlt.read("hub_order").select("order_id_hash_key","order_id")
-    sat_order = dlt.read("sat_order_bv").select("order_id_hash_key",col("load_timestamp").alias("order_load_timestamp"),"order_date","order_status","gross_amount","discount_amount","net_amount").join(hub_order,["order_id_hash_key"],"inner")
 
-    link = dlt.read("link_customer_order").select("customer_id_order_id_hash_key","customer_id_hash_key","order_id_hash_key").join(sat_order,["order_id_hash_key"],"inner")
+    sat_order = dlt.read("sat_order_bv").select("order_id_hash_key",col("load_timestamp").alias("order_load_timestamp"),"order_date","order_status","gross_amount","discount_amount","net_amount").join(hub_order,["order_id_hash_key"],"inner")
+    
+    dlt.read("sat_order_record_status").filter("order_record_state = 'DELETED'").select("order_id_hash_key","order_record_state").createOrReplaceTempView("deleted_orders")
+
+    dlt.read("link_customer_order").select("customer_id_order_id_hash_key","customer_id_hash_key","order_id_hash_key").join(sat_order,["order_id_hash_key"],"inner").createOrReplaceTempView("link")
      
-    ret_df = link.join(customers,[(link.customer_id_hash_key == customers.customer_id_hash_key ) & ( link.order_load_timestamp >= customers.cust_addr_load_timestamp ) &(link.order_load_timestamp < customers.customer_address_end_time)] ,"inner") \
-    .select(link.order_id_hash_key,link.gross_amount,link.discount_amount,link.net_amount,customers.customer_id,customers.customer_id_hash_key,customers.cust_addr_load_timestamp,customers.customer_dim_key)
-    .select(sha1(concat(col("customer_id").cast(StringType()),col("order_id").cast(StringType()),"cust_addr_load_timestamp")).alias("fact_key"),col("order_id_hash_key").alias("dim_order_key"),"customer_dim_key",col("discount_amount"),"net_amount","gross_amount")
+    joined_df = spark.sql("select l.order_id_hash_key, l.order_id, l.gross_amount,l.discount_amount,l.net_amount, c.customer_id, c.cust_addr_load_timestamp from link l JOIN customers c ON l.customer_id_hash_key = c.customer_id_hash_key and l.order_load_timestamp >= c.cust_addr_load_timestamp and l.order_load_timestamp < c.customer_address_end_time LEFT JOIN deleted_orders do on l.order_id_hash_key = do.order_id_hash_key WHERE do.order_record_state IS NULL")
+
+    ret_df = joined_df.select(sha1(concat(col("customer_id").cast(StringType()),col("order_id").cast(StringType()),"cust_addr_load_timestamp")).alias("fact_key"),col("order_id_hash_key").alias("order_dim_key"),sha1(concat(col("customer_id").cast(StringType()),"cust_addr_load_timestamp")).alias("customer_dim_key"),"discount_amount","net_amount","gross_amount")
 
     return(
         ret_df

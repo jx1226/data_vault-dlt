@@ -1,5 +1,6 @@
 # Databricks notebook source
-!pip install --upgrade pip && pip install dbldatagen
+# MAGIC %md
+# MAGIC Objective is to demonstrate how Delta Live Table (DLT) maintains an Enterprise Data Warehouse(EDW) built on Data Vault methodology and how DLT can propagte all changes(Insertion/update/delete) happening at the source system to EDW(Data vault) and informational marts(dimensional models) layers.
 
 # COMMAND ----------
 
@@ -7,10 +8,6 @@ from pyspark.sql.types import IntegerType, StringType, LongType, FloatType, Doub
 from pyspark.sql.functions import *
 #import dbldatagen as dg
 from pyspark.sql.functions import col
-
-# COMMAND ----------
-
-display(cust_df.select("first_name"))
 
 # COMMAND ----------
 
@@ -32,6 +29,7 @@ display(cust_df1)
 
 # COMMAND ----------
 
+#Creating new Orders
 #OrderPayload -  (cdc_metada(), before (order_id,customer_id,order_date,order_status,order_gross_amount,order_discount_amount,order_net_amount), after(order_id,customer_id,order_date,order_status,order_gross_amount,order_discount_amount,order_net_amount), Op_Type, Op_TimeStamp )
 #Creating new Order data
 order_data = [('xyz1111',None,(12341634,123456,'2023-03-26 15:36:02','C',700.0,100.0,600.0),'c',1679844962),('xyz1111',None,(12341635,123456,'2023-03-26 15:36:05','C',800.0,100.0,700.0),'c',1679844962),('xyz1111',None,(12341636,123457,'2023-03-26 15:36:08','C',500.0,50.0,450.0),'c',1679844962),('xyz1111',None,(12341637,123457,'2023-03-26 15:36:09','C',750.0,100.0,650.0),'c',1679844962)]
@@ -75,37 +73,7 @@ order_df3.write.mode("append").parquet("/user/data-vault/retail/order")
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC select current_timestamp();
-
-# COMMAND ----------
-
-cust_df3.write.mode("append").parquet("/user/data-vault/retail/customer")
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC select from_unixtime(1679945962)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC payload = {cdc_metada,before(OrderNumber,CustomerId, OrderDate, OrderStatus, OrderGrossAmount, OrderDiscountAmount, OrderNetAmount), after(OrderNumber,CustomerId, OrderDate, OrderStatus, OrderGrossAmount, OrderDiscountAmount, OrderNetAmount),Op_Type, Op_TimeStamp}
-
-# COMMAND ----------
-
-display(order_df2)
-
-# COMMAND ----------
-
-order_df1.write.mode("overwrite").parquet("/user/data-vault/retail/order")
-
-# COMMAND ----------
-
-order_df2.write.mode("append").parquet("/user/data-vault/retail/order")
-
-# COMMAND ----------
-
+#creating more Orders
 order_data = [('xyz1111',None,(12341642,123456,'2023-04-03 17:58:02','C',700.0,100.0,600.0),'c',1680544438),('xyz1111',None,(12341643,123456,'2023-04-03 17:58:02','C',800.0,100.0,700.0),'c',1680544438),('xyz1111',None,(12341644,123457,'2023-04-03 17:58:02','C',500.0,50.0,450.0),'c',1680544438),('xyz1111',None,(12341645,123456,'2023-04-03 17:58:02','C',750.0,100.0,600.0),'c',1680544438)]
 
 order_schema = StructType([StructField('cdc_metada', StringType(), True), StructField('before', StructType([StructField('Order_Id',IntegerType(),False),StructField('Customer_ID',IntegerType(),False),StructField('Order_Date',StringType(),True),StructField('Order_Status',StringType(),True),StructField('Order_Gross_Amount',DoubleType(),True),StructField('Order_Discount_Amount',DoubleType(),True),StructField('Order_net_Amount',DoubleType(),True)]), True),StructField('after', StructType([StructField('Order_Id',IntegerType(),False),StructField('Customer_ID',IntegerType(),False),StructField('Order_Date',StringType(),True),StructField('Order_Status',StringType(),True),StructField('Order_Gross_Amount',DoubleType(),True),StructField('Order_Discount_Amount',DoubleType(),True),StructField('Order_net_Amount',DoubleType(),True)]), True),StructField('Op_Type',StringType(),True),StructField('Op_TimeStamp',LongType(),True)])
