@@ -1,2 +1,3 @@
 # data_vault-dlt
-creating data vault EDW using delta live tables
+
+This project contains creating Data Vault and dimensional modeling entities using Databricks Delta Live Table.
