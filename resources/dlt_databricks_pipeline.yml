@@ -15,6 +15,5 @@ resources:
 
       target: lakehouse
       development: true
-      edition: CORE
+      edition: ADVANCED
       catalog: dlt_databricks
-      data_sampling: false
