@@ -5,7 +5,7 @@ from pyspark.sql.types import StringType,BooleanType,DateType
 
 # COMMAND ----------
 
-dbutils.widgets.text("base_path", "/user/data-vault/retail")
+dbutils.widgets.text("base_path", "abfss://dlt@rawdata18042024.dfs.core.windows.net/retail")
 base_path = dbutils.widgets.get("base_path")
 
 dbutils.widgets.text("record_source", "retail_global")

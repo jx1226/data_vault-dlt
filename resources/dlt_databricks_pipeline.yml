@@ -1,0 +1,20 @@
+resources:
+  pipelines:
+    dlt_databricks_pipeline:
+      name: dlt_databricks_pipeline
+
+      clusters:
+        - label: default
+          node_type_id: Standard_DS3_v2
+          driver_node_type_id: Standard_DS3_v2
+          num_workers: 1
+
+      libraries:
+        - notebook:
+            path: ../src/dlt_pipeline_python.py
+
+      target: lakehouse
+      development: true
+      edition: CORE
+      catalog: dlt_databricks
+      data_sampling: false

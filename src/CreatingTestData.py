@@ -4,6 +4,11 @@
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC Initial load
+
+# COMMAND ----------
+
 from pyspark.sql.types import IntegerType, StringType, LongType, FloatType, DoubleType, StructField
 from pyspark.sql.functions import *
 #import dbldatagen as dg
@@ -20,7 +25,7 @@ customer_schema = StructType([StructField('cdc_metada', StringType(), True), Str
 
 cust_df1 = spark.createDataFrame(customer_data,customer_schema)
 
-cust_df1.write.mode("overwrite").parquet("/user/data-vault/retail/customer")
+cust_df1.write.mode("overwrite").parquet("abfss://dlt@rawdata18042024.dfs.core.windows.net/retail/customer")
 
 
 # COMMAND ----------
@@ -37,8 +42,13 @@ order_data = [('xyz1111',None,(12341634,123456,'2023-03-26 15:36:02','C',700.0,1
 order_schema = StructType([StructField('cdc_metada', StringType(), True), StructField('before', StructType([StructField('Order_Id',IntegerType(),False),StructField('Customer_ID',IntegerType(),False),StructField('Order_Date',StringType(),True),StructField('Order_Status',StringType(),True),StructField('Order_Gross_Amount',DoubleType(),True),StructField('Order_Discount_Amount',DoubleType(),True),StructField('Order_net_Amount',DoubleType(),True)]), True),StructField('after', StructType([StructField('Order_Id',IntegerType(),False),StructField('Customer_ID',IntegerType(),False),StructField('Order_Date',StringType(),True),StructField('Order_Status',StringType(),True),StructField('Order_Gross_Amount',DoubleType(),True),StructField('Order_Discount_Amount',DoubleType(),True),StructField('Order_net_Amount',DoubleType(),True)]), True),StructField('Op_Type',StringType(),True),StructField('Op_TimeStamp',LongType(),True)])
 
 order_df1 = spark.createDataFrame(order_data,order_schema)
-order_df1.write.mode("overwrite").parquet("/user/data-vault/retail/order")
+order_df1.write.mode("overwrite").parquet("abfss://dlt@rawdata18042024.dfs.core.windows.net/retail/order")
 
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC New load
 
 # COMMAND ----------
 
@@ -49,7 +59,7 @@ customer_data = [('xyz1000',(123456,'john','green','1983-05-09','M','apt#12','st
 customer_schema = StructType([StructField('cdc_metada', StringType(), True), StructField('before', StructType([StructField('Customer_ID',IntegerType(),False),StructField('First_Name',StringType(),True),StructField('Last_Name',StringType(),True),StructField('DOB',StringType(),True),StructField('Gender',StringType(),True),StructField('Addr_Line1',StringType(),True),StructField('Addr_Line2',StringType(),True),StructField('city',StringType(),True),StructField('state',StringType(),True),StructField('ZipCode',StringType(),True),StructField('country',StringType(),True),StructField('Phone',StringType(),True),StructField('mobile',StringType(),True),StructField('email',StringType(),True)]), True), StructField('after', StructType([StructField('Customer_ID',IntegerType(),False),StructField('First_Name',StringType(),True),StructField('Last_Name',StringType(),True),StructField('DOB',StringType(),True),StructField('Gender',StringType(),True),StructField('Addr_Line1',StringType(),True),StructField('Addr_Line2',StringType(),True),StructField('city',StringType(),True),StructField('state',StringType(),True),StructField('ZipCode',StringType(),True),StructField('country',StringType(),True),StructField('Phone',StringType(),True),StructField('mobile',StringType(),True),StructField('email',StringType(),True)]), True),StructField('Op_Type',StringType(),True),StructField('Op_TimeStamp',LongType(),True)])
 
 cust_df2 = spark.createDataFrame(customer_data,customer_schema)
-cust_df2.write.mode("append").parquet("/user/data-vault/retail/customer")
+cust_df2.write.mode("append").parquet("abfss://dlt@rawdata18042024.dfs.core.windows.net/retail/customer")
 
 # COMMAND ----------
 
@@ -59,7 +69,7 @@ order_data = [('xyz1111',None,(12341638,123456,'2023-03-27 19:39:22','C',700.0,1
 order_schema = StructType([StructField('cdc_metada', StringType(), True), StructField('before', StructType([StructField('Order_Id',IntegerType(),False),StructField('Customer_ID',IntegerType(),False),StructField('Order_Date',StringType(),True),StructField('Order_Status',StringType(),True),StructField('Order_Gross_Amount',DoubleType(),True),StructField('Order_Discount_Amount',DoubleType(),True),StructField('Order_net_Amount',DoubleType(),True)]), True),StructField('after', StructType([StructField('Order_Id',IntegerType(),False),StructField('Customer_ID',IntegerType(),False),StructField('Order_Date',StringType(),True),StructField('Order_Status',StringType(),True),StructField('Order_Gross_Amount',DoubleType(),True),StructField('Order_Discount_Amount',DoubleType(),True),StructField('Order_net_Amount',DoubleType(),True)]), True),StructField('Op_Type',StringType(),True),StructField('Op_TimeStamp',LongType(),True)])
 
 order_df2 = spark.createDataFrame(order_data,order_schema)
-order_df2.write.mode("append").parquet("/user/data-vault/retail/order")
+order_df2.write.mode("append").parquet("abfss://dlt@rawdata18042024.dfs.core.windows.net/retail/order")
 
 # COMMAND ----------
 
@@ -69,7 +79,7 @@ order_data = [('xyz1111',(12341634,123456,'2023-03-26 15:36:02','C',700.0,100.0,
 order_schema = StructType([StructField('cdc_metada', StringType(), True), StructField('before', StructType([StructField('Order_Id',IntegerType(),False),StructField('Customer_ID',IntegerType(),False),StructField('Order_Date',StringType(),True),StructField('Order_Status',StringType(),True),StructField('Order_Gross_Amount',DoubleType(),True),StructField('Order_Discount_Amount',DoubleType(),True),StructField('Order_net_Amount',DoubleType(),True)]), True),StructField('after', StructType([StructField('Order_Id',IntegerType(),False),StructField('Customer_ID',IntegerType(),False),StructField('Order_Date',StringType(),True),StructField('Order_Status',StringType(),True),StructField('Order_Gross_Amount',DoubleType(),True),StructField('Order_Discount_Amount',DoubleType(),True),StructField('Order_net_Amount',DoubleType(),True)]), True),StructField('Op_Type',StringType(),True),StructField('Op_TimeStamp',LongType(),True)])
 
 order_df3 = spark.createDataFrame(order_data,order_schema)
-order_df3.write.mode("append").parquet("/user/data-vault/retail/order")
+order_df3.write.mode("append").parquet("abfss://dlt@rawdata18042024.dfs.core.windows.net/retail/order")
 
 # COMMAND ----------
 
