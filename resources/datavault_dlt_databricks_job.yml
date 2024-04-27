@@ -3,10 +3,14 @@ resources:
   jobs:
     datavault_dlt_databricks_job:
       name: datavault_dlt_databricks_job
+      trigger:
+        pause_status: UNPAUSED
+        file_arrival:
+          url: abfss://dlt@rawdata18042024.dfs.core.windows.net/retail/
       tasks:
         - task_key: datavault_dlt_databricks_job
           pipeline_task:
-            pipeline_id: f521d93b-673c-4b6f-86f1-7e23493c138c
+            pipeline_id: a1a6b1fe-444f-4053-8134-7af30b7e1666
             full_refresh: false
       queue:
         enabled: true
