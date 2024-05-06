@@ -218,17 +218,3 @@ def link_customer_order():
         .select("customer_id_order_id_hash_key","load_timestamp","record_source","customer_id_hash_key","order_id_hash_key")
 
     )
-
-# COMMAND ----------
-
-#Creating business vault table: Business vault is meant to apply soft business rules on the raw data vault. Transformations such as code-> description mappings can be performed in this layer.
-@dlt.view(
-    name = "sat_order_bv"
-)
-def sat_order_bv():
-    return(
-            dlt.read("sat_order")
-            .withColumn("order_status",when(col("order_status") == lit('C'), lit("COMPLETED")) \
-                .when(col("order_status") == lit('F'), lit("FAILED")) \
-                    .when(col("order_status") == lit('R'), lit("REJECTED")).otherwise(lit("UNKNOWN")))
-    )
