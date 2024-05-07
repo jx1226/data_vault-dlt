@@ -63,7 +63,7 @@ def hub_customer():
 @dlt.table(
     name = "sat_customer_personal_detail"
 )
-def sat_customer_address_temp():
+def sat_customer_personal_detail():
     return (
         dlt.readStream("customer_raw_temp")
         .filter("customer_id IS NOT NULL")
