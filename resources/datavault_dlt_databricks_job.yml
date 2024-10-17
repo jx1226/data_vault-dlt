@@ -10,7 +10,7 @@ resources:
       tasks:
         - task_key: datavault_dlt_databricks_job
           pipeline_task:
-            pipeline_id: fa1da25d-feb3-448f-9172-420623903b69
+            pipeline_id: 603bc728-788b-42e5-9511-c84f796fdafd
             full_refresh: false
       queue:
         enabled: true
