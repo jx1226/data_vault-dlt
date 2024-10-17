@@ -7,25 +7,19 @@ bundle:
 include:
   - resources/*.yml
 
-# Deployment targets.
-# The default schema, catalog, etc. for dbt are defined in dbt_profiles/profiles.yml
-targets:
-  dev:
-    default: true
-    # We use 'mode: development' to indicate this is a personal development copy.
-    # Any job schedules and triggers are paused by default.
-    mode: development
-    workspace:
-      host: adb-2777141288726595.15.azuredatabricks.net
 
-  prod:
-    mode: production
+variables:
+  workspace_URL:
+    description: "Workspace URL for Deploying the jobs or pipelines"
+  deployEnv:
+    description: "Environment literal like DEV, QUA, PRD"
+  deploymentMode:
+    description: "Databricks deployment mode (development or production)"
+
+
+targets:
+  $(deployEnv):
+    mode: $(deploymentMode)
     workspace:
-      # Host from Prod
-      host: default_host
-      # We always use /Users/{{user_name}} for all resources to make sure we only have a single copy.
-      root_path: /Users/{{user_name}}/.bundle/${bundle.name}/${bundle.target}
-    run_as:
-      # This runs as {{user_name}} in production. We could also use a service principal here
-      # using service_principal_name (see the Databricks documentation).
-      user_name: jie.xin@avanade.com
+      host: $(workspace_URL)
+      root_path: /Shared/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}

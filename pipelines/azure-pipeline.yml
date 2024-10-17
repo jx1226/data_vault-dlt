@@ -1,0 +1,298 @@
+trigger:
+- none
+
+pr:
+  branches:
+    include:
+    - main
+    - test
+    - develop
+
+stages:
+- stage: DEV
+  displayName: 'Development'
+  variables: 
+    - group: AVA_DEV_VGROUP
+  pool:
+    name: s-weu-dev-vnt-pool
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'), eq(variables['System.PullRequest.TargetBranch'], 'refs/heads/develop'))
+  jobs:
+  - job: DevJob
+    displayName: 'Development Job'
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.x'
+        addToPath: true
+
+    - task: AzureKeyVault@2
+      inputs:
+        azureSubscription: 'SP-AVA-dev'
+        KeyVaultName: 's-weu-dev-kv'
+        SecretsFilter: '*'
+        RunAsPreJob: false
+      displayName: "Fetch KeyVault Secrets"
+
+    - task: CopyFiles@2
+      inputs: 
+        SourceFolder: '$(Build.Repository.LocalPath)'
+        Contents: '**'
+        TargetFolder: '$(Build.BinariesDirectory)'
+        CleanTargetFolder: true
+        OverWrite: true
+      displayName: 'Copy files to BinariesDirectory'
+
+    - task: replacetokens@6
+      inputs:
+        root: '$(Build.BinariesDirectory)/'
+        sources: '**/databricks.yml'
+        encoding: 'auto'
+        tokenPattern: 'azpipelines'
+        tokenPrefix: '$('
+        tokenSuffix: ')'
+        addBOM: true
+        missingVarLog: 'warn'
+        ifNoFilesFound: 'error'
+        transforms: false
+        recursive: false
+        telemetryOptout: false
+      displayName: 'Replace tokens in BinariesDirectory'
+
+    - script: |
+        python -m pip install --upgrade pip setuptools wheel
+      displayName: 'Setup '
+
+    - bash: |
+        curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+        databricks --version
+      displayName: 'Install databricks CLI'
+    
+    - script: |
+        az login --service-principal -u $CLIENT_ID -p $CLIENT_SECRET --tenant $TENANT_ID
+      displayName: 'Azure CLI login'
+      env:
+        CLIENT_ID: $(sp-dev-id)
+        CLIENT_SECRET: $(sp-dev)
+        TENANT_ID: $(tenant-id)
+    
+    - bash:
+        echo "##vso[task.setvariable variable=DATABRICKS_BUNDLE_ROOT]$(Build.BinariesDirectory)/databricks/dlt/"
+      displayName: "Set BundleRoot (BinariesDirectory)"
+    
+    - bash: |
+        echo "This is the Bundle Root: $(DATABRICKS_BUNDLE_ROOT)"
+        echo "Deploy Environment: $(deployEnv)"
+        echo "Workspace URL: '$(workspace_URL)'"
+
+        # Validate the Bundle
+        databricks bundle validate --var="deployEnv=$(deployEnv),workspace_URL='$(workspace_URL)',deploymentMode=$(deploymentMode)"
+        
+      displayName: 'Validate DLT Bundle'
+    
+    - task: CopyFiles@2
+      inputs: 
+        SourceFolder: '$(Build.BinariesDirectory)'
+        Contents: '**'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+        CleanTargetFolder: true
+        OverWrite: true
+      displayName: 'Copy files to ArtifactStagingDirectory'
+
+    - bash:
+        echo "##vso[task.setvariable variable=DATABRICKS_BUNDLE_ROOT]$(Build.BinariesDirectory)/databricks/dlt/"
+      displayName: "Set BundleRoot (BinariesDirectory)"
+    
+    - bash: |
+        echo "This is the Bundle Root"
+        echo $(DATABRICKS_BUNDLE_ROOT)
+        databricks bundle deploy --target $(deployEnv) --var="deployEnv=$(deployEnv),workspace_URL='$(workspace_URL)',deploymentMode=$(deploymentMode)"
+      displayName: 'Deploy DLT Bundle'
+
+- stage: QUA
+  displayName: 'Staging'
+  variables: 
+    - group: AVA_QUA_VGROUP
+  pool:
+    name: s-weu-test-vnt-pool
+  jobs:
+  - job: QuaJob
+    displayName: 'QA Job'
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.x'
+        addToPath: true
+
+    - task: AzureKeyVault@2
+      inputs:
+        azureSubscription: 'SP-AVA-tst'
+        KeyVaultName: 's-weu-qa-kv'
+        SecretsFilter: '*'
+        RunAsPreJob: false
+      displayName: "Fetch KeyVault Secrets"
+
+    - task: CopyFiles@2
+      inputs: 
+        SourceFolder: '$(Build.Repository.LocalPath)'
+        Contents: '**'
+        TargetFolder: '$(Build.BinariesDirectory)'
+        CleanTargetFolder: true
+        OverWrite: true
+      displayName: 'Copy files to BinariesDirectory'
+
+    - task: replacetokens@6
+      inputs:
+        root: '$(Build.BinariesDirectory)/'
+        sources: '**/databricks.yml'
+        encoding: 'auto'
+        tokenPattern: 'azpipelines'
+        tokenPrefix: '$('
+        tokenSuffix: ')'
+        addBOM: true
+        missingVarLog: 'warn'
+        ifNoFilesFound: 'error'
+        transforms: false
+        recursive: false
+        telemetryOptout: false
+      displayName: 'Replace tokens in BinariesDirectory'
+
+    - script: |
+        python -m pip install --upgrade pip setuptools wheel
+      displayName: 'Setup '
+
+    - bash: |
+        curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+        databricks --version
+      displayName: 'Install databricks CLI'
+    
+    - script: |
+        az login --service-principal -u $CLIENT_ID -p $CLIENT_SECRET --tenant $TENANT_ID
+      displayName: 'Azure CLI login'
+      env:
+        CLIENT_ID: $(sp-qua-id)
+        CLIENT_SECRET: $(sp-qua)
+        TENANT_ID: $(tenant-id)
+    
+    - bash:
+        echo "##vso[task.setvariable variable=DATABRICKS_BUNDLE_ROOT]$(Build.BinariesDirectory)/databricks/dlt/"
+      displayName: "Set BundleRoot (BinariesDirectory)"
+    
+    - bash: |
+        echo "This is the Bundle Root: $(DATABRICKS_BUNDLE_ROOT)"
+        echo "Deploy Environment: $(deployEnv)"
+        echo "Workspace URL: '$(workspace_URL)'"
+
+        # Validate the Bundle
+        databricks bundle validate --var="deployEnv=$(deployEnv),workspace_URL='$(workspace_URL)',deploymentMode=$(deploymentMode)"
+        
+      displayName: 'Validate DLT Bundle'
+
+    - task: CopyFiles@2
+      inputs: 
+        SourceFolder: '$(Build.BinariesDirectory)'
+        Contents: '**'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+        CleanTargetFolder: true
+        OverWrite: true
+      displayName: 'Copy files to ArtifactStagingDirectory'
+    
+    - bash: |
+        echo "This is the Bundle Root"
+        echo $(DATABRICKS_BUNDLE_ROOT)
+        databricks bundle deploy --target $(deployEnv) --var="deployEnv=$(deployEnv),workspace_URL='$(workspace_URL)',deploymentMode=$(deploymentMode)"
+      displayName: 'Deploy DLT Bundle'
+    
+- stage: PRD
+  displayName: 'Production'
+  variables: 
+    - group: AVA_PRD_VGROUP
+  pool:
+    name: s-weu-prod-vnt-pool
+  dependsOn: QUA
+  jobs:
+  - job: PrdJob
+    displayName: 'Production Job'
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.x'
+        addToPath: true
+
+    - task: AzureKeyVault@2
+      inputs:
+        azureSubscription: 'SP-AVA-prd'
+        KeyVaultName: 's-weu-prd-kv'
+        SecretsFilter: '*'
+        RunAsPreJob: false
+      displayName: "Fetch KeyVault Secrets"
+
+    - task: CopyFiles@2
+      inputs: 
+        SourceFolder: '$(Build.Repository.LocalPath)'
+        Contents: '**'
+        TargetFolder: '$(Build.BinariesDirectory)'
+        CleanTargetFolder: true
+        OverWrite: true
+      displayName: 'Copy files to BinariesDirectory'
+
+    - task: replacetokens@6
+      inputs:
+        root: '$(Build.BinariesDirectory)/'
+        sources: '**/databricks.yml'
+        encoding: 'auto'
+        tokenPattern: 'azpipelines'
+        tokenPrefix: '$('
+        tokenSuffix: ')'
+        addBOM: true
+        missingVarLog: 'warn'
+        ifNoFilesFound: 'error'
+        transforms: false
+        recursive: false
+        telemetryOptout: false
+      displayName: 'Replace tokens in BinariesDirectory'
+
+    - script: |
+        python -m pip install --upgrade pip setuptools wheel
+      displayName: 'Setup '
+
+    - bash: |
+        curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+        databricks --version
+      displayName: 'Install databricks CLI'
+    
+    - script: |
+        az login --service-principal -u $CLIENT_ID -p $CLIENT_SECRET --tenant $TENANT_ID
+      displayName: 'Azure CLI login'
+      env:
+        CLIENT_ID: $(sp-prd-id)
+        CLIENT_SECRET: $(sp-prd)
+        TENANT_ID: $(tenant-id)
+    
+    - bash:
+        echo "##vso[task.setvariable variable=DATABRICKS_BUNDLE_ROOT]$(Build.BinariesDirectory)/databricks/dlt/"
+      displayName: "Set BundleRoot (BinariesDirectory)"
+    
+    - bash: |
+        echo "This is the Bundle Root: $(DATABRICKS_BUNDLE_ROOT)"
+        echo "Deploy Environment: $(deployEnv)"
+        echo "Workspace URL: '$(workspace_URL)'"
+
+        # Validate the Bundle
+        databricks bundle validate --var="deployEnv=$(deployEnv),workspace_URL='$(workspace_URL)',deploymentMode=$(deploymentMode)"
+        
+      displayName: 'Validate DLT Bundle'
+
+    - task: CopyFiles@2
+      inputs: 
+        SourceFolder: '$(Build.BinariesDirectory)'
+        Contents: '**'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+        CleanTargetFolder: true
+        OverWrite: true
+      displayName: 'Copy files to ArtifactStagingDirectory'
+    
+    - bash: |
+        echo "This is the Bundle Root"
+        echo $(DATABRICKS_BUNDLE_ROOT)
+        databricks bundle deploy --target $(deployEnv) --var="deployEnv=$(deployEnv),workspace_URL='$(workspace_URL)',deploymentMode=$(deploymentMode)"
+      displayName: 'Deploy DLT Bundle'
