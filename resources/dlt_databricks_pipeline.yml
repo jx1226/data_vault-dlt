@@ -1,3 +1,4 @@
+# DLT Pipeline
 resources:
   pipelines:
     dlt_databricks_pipeline:
